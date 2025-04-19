@@ -1,0 +1,132 @@
+<MudGrid Justify="Justify.Center">
+    @foreach (DiceType type in Enum.GetValues<DiceType>())
+    {
+        <MudItem xs="3" md="1">
+            <MudFab Label="@Die.Display(type)" DropShadow="false" @onclick="() => AddDie(type)"/>
+        </MudItem>
+    }
+
+    <MudItem xs="12">
+        <MudSimpleTable Dense="true" Hover="true" Bordered="true">
+            <thead>
+            <tr>
+                @foreach (DieCount count in Counts)
+                {
+                    <th>@count.Type</th>
+                }
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                @foreach (DieCount count in Counts)
+                {
+                    <td>@count.Count</td>
+                }
+            </tr>
+            </tbody>
+        </MudSimpleTable>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" @onclick="Roll">Roll</MudButton>
+    </MudItem>
+
+    @if (Results.Length > 0)
+    {
+        <MudItem xs="12">
+            <MudDataGrid @ref="_dataGrid" Items="Results" Filterable="true"
+                         Hideable="true" Groupable="true" GroupExpanded="false">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Results</MudText>
+                    <MudSpacer/>
+                </ToolBarContent>
+                <Columns>
+                    <PropertyColumn Property="x => x.Type" Title="Die" Grouping GroupBy="x => x.Type">
+                        <GroupTemplate>
+                                <span style="font-weight:bold">@context.Grouping.Key
+                                    <MudChip Variant="Variant.Filled"
+                                             Size="Size.Small">count @context.Grouping.Count()</MudChip>
+                                    <MudChip Variant="Variant.Filled"
+                                             Size="Size.Small">total @context.Grouping.Sum(r => r.Value)</MudChip>
+                                    <MudChip Variant="Variant.Filled"
+                                             Size="Size.Small">highest @context.Grouping.Max(r => r.Value)</MudChip>
+                                    <MudChip Variant="Variant.Filled"
+                                             Size="Size.Small">lowest @context.Grouping.Min(r => r.Value)</MudChip>
+                                </span>
+                        </GroupTemplate>
+                    </PropertyColumn>
+                    <PropertyColumn Property="x => x.Value" Title="Result"/>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="DieResult"/>
+                </PagerContent>
+            </MudDataGrid>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
+            <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+
+    MudDataGrid<DieResult>? _dataGrid;
+
+    DieResult[] Results { get; set; } = [];
+    List<Die> Dice { get; init; } = [];
+
+    DieCount[] Counts =>
+        Dice.GroupBy(d => d.Type)
+            .Select(g => new DieCount(g.Key, g.Count()))
+            .OrderBy(c => c.Type)
+            .ToArray();
+
+    void Roll() => Results = Dice.Select(die => die.Roll()).ToArray();
+    void ExpandAllGroups() => _dataGrid?.ExpandAllGroups();
+    void CollapseAllGroups() => _dataGrid?.CollapseAllGroups();
+
+    void AddDie(DiceType type)
+    {
+        Results = [];
+        Dice.Add(new Die(type));
+    }
+
+    readonly record struct DieResult(DiceType Type, int Value);
+
+    readonly record struct DieCount(DiceType Type, int Count);
+
+    record Die(DiceType Type)
+    {
+        internal DieResult Roll() =>
+            new(Type, Random.Shared.Next(1, 1 + (int)Type));
+
+        internal static string Display(DiceType type) =>
+            type switch
+            {
+                DiceType.D2 => "d2",
+                DiceType.D4 => "d4",
+                DiceType.D6 => "d6",
+                DiceType.D8 => "d8",
+                DiceType.D10 => "d10",
+                DiceType.D12 => "d12",
+                DiceType.D20 => "d20",
+                DiceType.D100 => "d100",
+                _ => throw new InvalidOperationException()
+            };
+    }
+
+    enum DiceType
+    {
+        D2 = 2,
+        D4 = 4,
+        D6 = 6,
+        D8 = 8,
+        D10 = 10,
+        D12 = 12,
+        D20 = 20,
+        D100 = 100
+    }
+
+}
