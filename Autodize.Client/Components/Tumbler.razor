@@ -1,73 +1,88 @@
 <MudGrid Justify="Justify.Center">
     @foreach (DiceType type in Enum.GetValues<DiceType>())
     {
-        <MudItem xs="3" md="1">
-            <MudFab Label="@Die.Display(type)" DropShadow="false" @onclick="() => AddDie(type)"/>
+        int count = Dice.Count(d => d.Type == type);
+
+        <MudItem xs="3" md="1" Class="justify-center">
+            <MudBadge Origin="Origin.TopLeft" Content="@count" Overlap="true" Visible="@(count > 0)">
+                <MudFab Label="@Die.Display(type)" DropShadow="false" @onpointerdown="OnClick"
+                        oncontextmenu="return false;"/>
+            </MudBadge>
         </MudItem>
+
+        continue;
+
+        void OnClick(PointerEventArgs args)
+        {
+            switch (args.Button)
+            {
+                case 0:
+                    Results = [];
+                    Dice.Add(new Die(type));
+                    break;
+                case 2:
+                    Die? die = Dice.FirstOrDefault(d => d.Type == type);
+                    if (die is null) return;
+                    Results = [];
+                    Dice.Remove(die);
+                    break;
+            }
+        }
     }
 
     <MudItem xs="12">
-        <MudSimpleTable Dense="true" Hover="true" Bordered="true">
-            <thead>
-            <tr>
-                @foreach (DieCount count in Counts)
-                {
-                    <th>@count.Type</th>
-                }
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                @foreach (DieCount count in Counts)
-                {
-                    <td>@count.Count</td>
-                }
-            </tr>
-            </tbody>
-        </MudSimpleTable>
+        <MudCollapse Expanded="Dice.Any()">
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12" sm="6" md="4" lg="3" xl="2">
+                    <MudButton Variant="Variant.Outlined" FullWidth="true" @onclick="Dice.Clear">Clear</MudButton>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="4" lg="3" xl="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" @onclick="Roll">Roll
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudCollapse>
     </MudItem>
 
     <MudItem xs="12">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" @onclick="Roll">Roll</MudButton>
+        <MudCollapse Expanded="Results.Any()">
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12" md="8" lg="6" xl="4">
+                    <MudDataGrid @ref="_dataGrid" Items="Results" Filterable="true"
+                                 Hideable="true" Groupable="true" GroupExpanded="false" Dense="true" RowsPerPage="100">
+                        <Columns>
+                            <PropertyColumn Property="x => x.Type" Title="Die" Grouping GroupBy="x => x.Type">
+                                <GroupTemplate>
+                                    <span style="font-weight:bold">@context.Grouping.Key
+                                        <MudChip Variant="Variant.Filled"
+                                                 Size="Size.Small">count @context.Grouping.Count()</MudChip>
+                                        <MudChip Variant="Variant.Filled"
+                                                 Size="Size.Small">total @context.Grouping.Sum(r => r.Value)</MudChip>
+                                        <MudChip Variant="Variant.Filled"
+                                                 Size="Size.Small">highest @context.Grouping.Max(r => r.Value)</MudChip>
+                                        <MudChip Variant="Variant.Filled"
+                                                 Size="Size.Small">lowest @context.Grouping.Min(r => r.Value)</MudChip>
+                                    </span>
+                                </GroupTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.Value" Title="Result"/>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="DieResult"/>
+                        </PagerContent>
+                    </MudDataGrid>
+                </MudItem>
+
+                <MudFlexBreak/>
+
+                <MudItem xs="12" md="8" lg="6" xl="4">
+                    <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
+                    <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudCollapse>
     </MudItem>
-
-    @if (Results.Length > 0)
-    {
-        <MudItem xs="12">
-            <MudDataGrid @ref="_dataGrid" Items="Results" Filterable="true"
-                         Hideable="true" Groupable="true" GroupExpanded="false">
-                <ToolBarContent>
-                    <MudText Typo="Typo.h6">Results</MudText>
-                    <MudSpacer/>
-                </ToolBarContent>
-                <Columns>
-                    <PropertyColumn Property="x => x.Type" Title="Die" Grouping GroupBy="x => x.Type">
-                        <GroupTemplate>
-                                <span style="font-weight:bold">@context.Grouping.Key
-                                    <MudChip Variant="Variant.Filled"
-                                             Size="Size.Small">count @context.Grouping.Count()</MudChip>
-                                    <MudChip Variant="Variant.Filled"
-                                             Size="Size.Small">total @context.Grouping.Sum(r => r.Value)</MudChip>
-                                    <MudChip Variant="Variant.Filled"
-                                             Size="Size.Small">highest @context.Grouping.Max(r => r.Value)</MudChip>
-                                    <MudChip Variant="Variant.Filled"
-                                             Size="Size.Small">lowest @context.Grouping.Min(r => r.Value)</MudChip>
-                                </span>
-                        </GroupTemplate>
-                    </PropertyColumn>
-                    <PropertyColumn Property="x => x.Value" Title="Result"/>
-                </Columns>
-                <PagerContent>
-                    <MudDataGridPager T="DieResult"/>
-                </PagerContent>
-            </MudDataGrid>
-        </MudItem>
-
-        <MudItem xs="12">
-            <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
-            <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
-        </MudItem>
-    }
 </MudGrid>
 
 @code {
@@ -77,21 +92,15 @@
     DieResult[] Results { get; set; } = [];
     List<Die> Dice { get; init; } = [];
 
-    DieCount[] Counts =>
-        Dice.GroupBy(d => d.Type)
-            .Select(g => new DieCount(g.Key, g.Count()))
-            .OrderBy(c => c.Type)
-            .ToArray();
+    private void Clear()
+    {
+        Results = [];
+        Dice.Clear();
+    }
 
     void Roll() => Results = Dice.Select(die => die.Roll()).ToArray();
     void ExpandAllGroups() => _dataGrid?.ExpandAllGroups();
     void CollapseAllGroups() => _dataGrid?.CollapseAllGroups();
-
-    void AddDie(DiceType type)
-    {
-        Results = [];
-        Dice.Add(new Die(type));
-    }
 
     readonly record struct DieResult(DiceType Type, int Value);
 
