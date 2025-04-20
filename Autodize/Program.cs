@@ -1,8 +1,10 @@
+using Autodize.Client.Services;
 using MudBlazor.Services;
-using Autodize.Client.Pages;
 using Autodize.Components;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<Notifier>();
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
