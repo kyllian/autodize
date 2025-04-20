@@ -33,16 +33,20 @@
         }
     }
 
+    <MudFlexBreak/>
+
     @if (IsDiceLimitAlertVisible)
     {
-        <MudItem xs="12">
+        <MudItem xs="12" md="8" lg="6" xl="4">
             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" ShowCloseIcon="true" CloseIconClicked="() => IsDiceLimitAlertVisible = false">
                 The max number of dice is currently 100 due to UX limitations of the UI framework. Leave an issue on GitHub if you need more, or better yet, make a PR! :)
             </MudAlert>
         </MudItem>
     }
 
-    <MudItem xs="12">
+    <MudFlexBreak/>
+    
+    <MudItem xs="12" md="8" lg="6" xl="4">
         <MudPaper>
             <MudToolBar Class="d-flex gap-4 sticky" Dense="true" Gutters="true">
                 <MudIconButton Icon="@Icons.Material.Outlined.Menu" Color="Color.Inherit" Class="mr-5"
@@ -65,6 +69,9 @@
                     <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
                     <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
                 </MudItem>
+
+                <MudFlexBreak/>
+                
                 <MudItem xs="12" md="8" lg="6" xl="4">
                     <MudDataGrid @ref="_dataGrid" Items="Results" Filterable="true"
                                  Hideable="true" Groupable="true" GroupExpanded="false" Dense="true" RowsPerPage="100">
@@ -89,6 +96,9 @@
                         </PagerContent>
                     </MudDataGrid>
                 </MudItem>
+
+                <MudFlexBreak/>
+                
                 <MudItem xs="12" md="8" lg="6" xl="4">
                     <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
                     <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
