@@ -1,4 +1,7 @@
 ﻿@page "/"
+@using Autodize.Client.Services
+
+@inject Notifier Notifier
 
 <PageTitle>autodize</PageTitle>
 
@@ -7,7 +10,7 @@
         @foreach (Tumbler tumbler in Tumblers)
         {
             <MudItem xs="12">
-                <Tumbler/>
+                <Tumbler OnRemoveCallback="Remove" />
             </MudItem>
 
             <MudItem xs="12" md="8" lg="6" xl="4">
@@ -15,6 +18,10 @@
             </MudItem>
             
             <MudFlexBreak/>
+            
+            continue;
+
+            void Remove(object e) => Tumblers.Remove(tumbler);
         }
 
         <MudItem xs="12" md="8" lg="6" xl="4">
@@ -29,5 +36,5 @@
 @code {
 
     private List<Tumbler> Tumblers { get; init; } = [new()];
-
+    
 }

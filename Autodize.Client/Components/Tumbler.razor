@@ -1,81 +1,94 @@
+@using Autodize.Client.Services
+@inject Notifier Notifier
+
 <MudGrid Justify="Justify.Center">
     @foreach (DiceType type in Enum.GetValues<DiceType>())
     {
         int count = Dice.Count(d => d.Type == type);
 
-        <MudItem xs="3" md="1" Class="justify-center">
-            <MudBadge Origin="Origin.TopLeft" Content="@count" Overlap="true" Visible="@(count > 0)">
-                <MudFab Label="@Die.Display(type)" DropShadow="false" @onpointerdown="OnClick"
-                        oncontextmenu="return false;"/>
-            </MudBadge>
+        <MudItem xs="3" lg="1" Class="justify-center" Style="text-align: center;">
+            <MudNumericField Value="count" Min="0" ValueChanged="OnChanged" T="int"
+                             Class="d-flex" Label="@Die.Display(type)"
+                             Variant="Variant.Outlined" Margin="Margin.Dense"/>
         </MudItem>
 
         continue;
 
-        void OnClick(PointerEventArgs args)
+        Task OnChanged(int value)
         {
-            switch (args.Button)
+            if (value + Dice.Count(d => d.Type != type) > 100)
             {
-                case 0:
-                    Results = [];
-                    Dice.Add(new Die(type));
-                    break;
-                case 2:
-                    Die? die = Dice.FirstOrDefault(d => d.Type == type);
-                    if (die is null) return;
-                    Results = [];
-                    Dice.Remove(die);
-                    break;
+                IsDiceLimitAlertVisible = true;
+                return Task.CompletedTask;
             }
+
+            Results = [];
+            Dice.RemoveAll(d => d.Type == type);
+            for (int i = 0; i < value; i++)
+            {
+                Dice.Add(new(type));
+            }
+
+            return Task.CompletedTask;
         }
     }
 
-    <MudItem xs="12">
-        <MudCollapse Expanded="Dice.Any()">
-            <MudGrid Justify="Justify.Center">
-                <MudItem xs="12" sm="6" md="4" lg="3" xl="2">
-                    <MudButton Variant="Variant.Outlined" FullWidth="true" @onclick="Dice.Clear">Clear</MudButton>
-                </MudItem>
+    @if (IsDiceLimitAlertVisible)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" ShowCloseIcon="true" CloseIconClicked="() => IsDiceLimitAlertVisible = false">
+                The max number of dice is currently 100 due to UX limitations of the UI framework. Leave an issue on GitHub if you need more, or better yet, make a PR! :)
+            </MudAlert>
+        </MudItem>
+    }
 
-                <MudItem xs="12" sm="6" md="4" lg="3" xl="2">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" @onclick="Roll">Roll
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudCollapse>
+    <MudItem xs="12">
+        <MudPaper>
+            <MudToolBar Class="d-flex gap-4 sticky" Dense="true" Gutters="true">
+                <MudIconButton Icon="@Icons.Material.Outlined.Menu" Color="Color.Inherit" Class="mr-5"
+                               OnClick="() => IsTumblerOpen = true"/>
+                <MudSpacer/>
+                <MudButton Variant="Variant.Outlined" Class="flex-auto" Color="Color.Secondary"
+                           @onclick="OnRemoveCallback">Remove
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Class="flex-auto" Color="Color.Primary" @onclick="Roll">
+                    Roll
+                </MudButton>
+            </MudToolBar>
+        </MudPaper>
     </MudItem>
 
     <MudItem xs="12">
         <MudCollapse Expanded="Results.Any()">
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" md="8" lg="6" xl="4">
+                    <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
+                    <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
+                </MudItem>
+                <MudItem xs="12" md="8" lg="6" xl="4">
                     <MudDataGrid @ref="_dataGrid" Items="Results" Filterable="true"
                                  Hideable="true" Groupable="true" GroupExpanded="false" Dense="true" RowsPerPage="100">
                         <Columns>
                             <PropertyColumn Property="x => x.Type" Title="Die" Grouping GroupBy="x => x.Type">
                                 <GroupTemplate>
-                                    <span style="font-weight:bold">@context.Grouping.Key
-                                        <MudChip Variant="Variant.Filled"
-                                                 Size="Size.Small">count @context.Grouping.Count()</MudChip>
-                                        <MudChip Variant="Variant.Filled"
+                                    <span style="font-weight:bold">
+                                        @($"{context.Grouping.Count()}{@context.Grouping.Key?.ToString()?.ToLower()}")
+                                        <MudChip Variant="Variant.Outlined" Color="Color.Info"
                                                  Size="Size.Small">total @context.Grouping.Sum(r => r.Value)</MudChip>
-                                        <MudChip Variant="Variant.Filled"
-                                                 Size="Size.Small">highest @context.Grouping.Max(r => r.Value)</MudChip>
-                                        <MudChip Variant="Variant.Filled"
-                                                 Size="Size.Small">lowest @context.Grouping.Min(r => r.Value)</MudChip>
+                                        <MudChip Variant="Variant.Outlined" Color="Color.Success"
+                                                 Size="Size.Small">advantage @context.Grouping.Max(r => r.Value)</MudChip>
+                                        <MudChip Variant="Variant.Outlined" Color="Color.Error"
+                                                 Size="Size.Small">disadvantage @context.Grouping.Min(r => r.Value)</MudChip>
                                     </span>
                                 </GroupTemplate>
                             </PropertyColumn>
                             <PropertyColumn Property="x => x.Value" Title="Result"/>
                         </Columns>
                         <PagerContent>
-                            <MudDataGridPager T="DieResult"/>
+                            <MudDataGridPager T="DieResult" Class="d-none"/>
                         </PagerContent>
                     </MudDataGrid>
                 </MudItem>
-
-                <MudFlexBreak/>
-
                 <MudItem xs="12" md="8" lg="6" xl="4">
                     <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
                     <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
@@ -85,22 +98,61 @@
     </MudItem>
 </MudGrid>
 
+<MudDrawer @bind-Open="IsTumblerOpen" Elevation="1" Variant="DrawerVariant.Temporary" Width="7rem"
+           Style="text-align: center;">
+    @foreach (DiceType type in Enum.GetValues<DiceType>())
+    {
+        int count = Dice.Count(d => d.Type == type);
+
+        <div>
+            <MudBadge Origin="Origin.TopRight" Content="@count" Overlap="true" Visible="@(count > 0)">
+                <MudFab Label="@Die.Display(type)" DropShadow="false" @onpointerdown="OnClick"
+                        oncontextmenu="return false;"/>
+            </MudBadge>
+        </div>
+
+        continue;
+
+        void OnClick(PointerEventArgs args)
+        {
+            switch (args.Button)
+            {
+                case 0:
+                    Results = [];
+                    Dice.Add(new(type));
+                    break;
+                case 2:
+                    Results = [];
+                    Die? die = Dice.FirstOrDefault(d => d.Type == type);
+                    if (die is null) return;
+                    Results = [];
+                    Dice.Remove(die);
+                    break;
+            }
+        }
+    }
+</MudDrawer>
+
 @code {
 
     MudDataGrid<DieResult>? _dataGrid;
 
+    bool IsTumblerOpen { get; set; } = false;
+    bool IsDiceLimitAlertVisible { get; set; } = false;
+    
     DieResult[] Results { get; set; } = [];
     List<Die> Dice { get; init; } = [];
 
-    private void Clear()
-    {
-        Results = [];
-        Dice.Clear();
-    }
+    [Parameter] public EventCallback<MouseEventArgs> OnRemoveCallback { get; set; }
 
     void Roll() => Results = Dice.Select(die => die.Roll()).ToArray();
     void ExpandAllGroups() => _dataGrid?.ExpandAllGroups();
     void CollapseAllGroups() => _dataGrid?.CollapseAllGroups();
+
+    private void OpenTumbler()
+    {
+        IsTumblerOpen = true;
+    }
 
     readonly record struct DieResult(DiceType Type, int Value);
 
