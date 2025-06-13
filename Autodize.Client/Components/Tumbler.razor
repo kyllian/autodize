@@ -2,14 +2,16 @@
     @foreach (var type in Enum.GetValues<DiceType>())
     {
         int count = Dice.Count(d => d.Type == type);
-        <MudItem xs="6" lg="3" Style="text-align: center;">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Style="text-align: center;">
-                <MudFab Class="d-flex flex-shrink-0" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Remove" OnClick="OnRemove"/>
+        <MudItem xs="6" lg="3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Style="touch-action: manipulation;">
+                <MudFab Class="d-flex flex-shrink-0" Color="Color.Primary" Size="Size.Small"
+                        StartIcon="@Icons.Material.Filled.Remove" OnClick="OnRemove"/>
                 <MudTextField Variant="Variant.Outlined" InputType="InputType.Number"
-                                 Value="count" ValueChanged="value => OnChanged(value)"
-                                 Margin="Margin.Dense" Label="@Die.Display(type)" T="int"
-                                 Class="d-flex flex-shrink-1 text-center" Typo="Typo.subtitle1" />
-                <MudFab Class="d-flex flex-shrink-0" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="OnAdd"/>
+                              Value="count" ValueChanged="value => OnChanged(value)"
+                              Margin="Margin.Dense" Label="@Die.Display(type)" T="int"
+                              Class="d-flex flex-shrink-1"/>
+                <MudFab Class="d-flex flex-shrink-0" Color="Color.Primary" Size="Size.Small"
+                        StartIcon="@Icons.Material.Filled.Add" OnClick="OnAdd"/>
             </MudStack>
         </MudItem>
 
@@ -43,21 +45,21 @@
                 IsDiceLimitAlertVisible = true;
                 return Task.CompletedTask;
             }
-        
+
             Results = [];
-        
+
             if (value < 0) value = 0;
-        
+
             while (value < (Dice.Count(d => d.Type == type) - count))
             {
                 OnRemove();
             }
-        
+
             while (value > (Dice.Count(d => d.Type == type) - count))
             {
                 OnAdd();
             }
-        
+
             return Task.CompletedTask;
         }
     }
