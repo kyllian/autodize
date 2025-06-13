@@ -1,34 +1,63 @@
-@using Autodize.Client.Services
-@inject Notifier Notifier
-
 <MudGrid Justify="Justify.Center">
-    @foreach (DiceType type in Enum.GetValues<DiceType>())
+    @foreach (var type in Enum.GetValues<DiceType>())
     {
         int count = Dice.Count(d => d.Type == type);
-
-        <MudItem xs="3" lg="1" Class="justify-center" Style="text-align: center;">
-            <MudNumericField Value="count" Min="0" ValueChanged="OnChanged" T="int"
-                             Class="d-flex" Label="@Die.Display(type)"
-                             Variant="Variant.Outlined" Margin="Margin.Dense"/>
+        <MudItem xs="6" lg="3" Style="text-align: center;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Style="text-align: center;">
+                <MudFab Class="d-flex flex-shrink-0" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Remove" OnClick="OnRemove"/>
+                <MudTextField Variant="Variant.Outlined" InputType="InputType.Number"
+                                 Value="count" ValueChanged="value => OnChanged(value)"
+                                 Margin="Margin.Dense" Label="@Die.Display(type)" T="int"
+                                 Class="d-flex flex-shrink-1 text-center" Typo="Typo.subtitle1" />
+                <MudFab Class="d-flex flex-shrink-0" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="OnAdd"/>
+            </MudStack>
         </MudItem>
 
         continue;
 
-        Task OnChanged(int value)
+        Task OnRemove()
         {
-            if (value + Dice.Count(d => d.Type != type) > 100)
+            Results = [];
+            var die = Dice.FirstOrDefault(d => d.Type == type);
+            if (die is null) return Task.CompletedTask;
+            Dice.Remove(die);
+            return Task.CompletedTask;
+        }
+
+        Task OnAdd()
+        {
+            if (Dice.Count() > 99)
             {
                 IsDiceLimitAlertVisible = true;
                 return Task.CompletedTask;
             }
 
-            Results = [];
-            Dice.RemoveAll(d => d.Type == type);
-            for (int i = 0; i < value; i++)
-            {
-                Dice.Add(new(type));
-            }
+            Dice.Add(new(type));
+            return Task.CompletedTask;
+        }
 
+        Task OnChanged(int value)
+        {
+            if (value + Dice.Count() > 100)
+            {
+                IsDiceLimitAlertVisible = true;
+                return Task.CompletedTask;
+            }
+        
+            Results = [];
+        
+            if (value < 0) value = 0;
+        
+            while (value < (Dice.Count(d => d.Type == type) - count))
+            {
+                OnRemove();
+            }
+        
+            while (value > (Dice.Count(d => d.Type == type) - count))
+            {
+                OnAdd();
+            }
+        
             return Task.CompletedTask;
         }
     }
@@ -38,14 +67,16 @@
     @if (IsDiceLimitAlertVisible)
     {
         <MudItem xs="12" md="8" lg="6" xl="4">
-            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" ShowCloseIcon="true" CloseIconClicked="() => IsDiceLimitAlertVisible = false">
-                The max number of dice is currently 100 due to UX limitations of the UI framework. Leave an issue on GitHub if you need more, or better yet, make a PR! :)
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" ShowCloseIcon="true"
+                      CloseIconClicked="() => IsDiceLimitAlertVisible = false">
+                The max number of dice is currently 100 due to UX limitations of the UI framework. Leave an issue on
+                GitHub if you need more, or better yet, make a PR! :)
             </MudAlert>
         </MudItem>
     }
 
     <MudFlexBreak/>
-    
+
     <MudItem xs="12" md="8" lg="6" xl="4">
         <MudPaper>
             <MudToolBar Class="d-flex gap-4 sticky" Dense="true" Gutters="true">
@@ -71,7 +102,7 @@
                 </MudItem>
 
                 <MudFlexBreak/>
-                
+
                 <MudItem xs="12" md="8" lg="6" xl="4">
                     <MudDataGrid @ref="_dataGrid" Items="Results" Filterable="true"
                                  Hideable="true" Groupable="true" GroupExpanded="false" Dense="true" RowsPerPage="100">
@@ -98,7 +129,7 @@
                 </MudItem>
 
                 <MudFlexBreak/>
-                
+
                 <MudItem xs="12" md="8" lg="6" xl="4">
                     <MudButton OnClick="@ExpandAllGroups" Color="@Color.Primary">Expand All</MudButton>
                     <MudButton OnClick="@CollapseAllGroups" Color="@Color.Primary">Collapse All</MudButton>
@@ -110,7 +141,7 @@
 
 <MudDrawer @bind-Open="IsTumblerOpen" Elevation="1" Variant="DrawerVariant.Temporary" Width="7rem"
            Style="text-align: center;">
-    @foreach (DiceType type in Enum.GetValues<DiceType>())
+    @foreach (var type in Enum.GetValues<DiceType>())
     {
         int count = Dice.Count(d => d.Type == type);
 
@@ -133,7 +164,7 @@
                     break;
                 case 2:
                     Results = [];
-                    Die? die = Dice.FirstOrDefault(d => d.Type == type);
+                    var die = Dice.FirstOrDefault(d => d.Type == type);
                     if (die is null) return;
                     Results = [];
                     Dice.Remove(die);
@@ -147,26 +178,33 @@
 
     MudDataGrid<DieResult>? _dataGrid;
 
-    bool IsTumblerOpen { get; set; } = false;
-    bool IsDiceLimitAlertVisible { get; set; } = false;
-    
+    bool IsTumblerOpen { get; set; }
+    bool IsDiceLimitAlertVisible { get; set; }
+
     DieResult[] Results { get; set; } = [];
-    List<Die> Dice { get; init; } = [];
+    List<Die> Dice { get; } = [];
 
     [Parameter] public EventCallback<MouseEventArgs> OnRemoveCallback { get; set; }
 
     void Roll() => Results = Dice.Select(die => die.Roll()).ToArray();
-    void ExpandAllGroups() => _dataGrid?.ExpandAllGroups();
-    void CollapseAllGroups() => _dataGrid?.CollapseAllGroups();
 
-    private void OpenTumbler()
+    async Task ExpandAllGroups()
     {
-        IsTumblerOpen = true;
+        if (_dataGrid is not null)
+        {
+            await _dataGrid.ExpandAllGroupsAsync();
+        }
+    }
+
+    async Task CollapseAllGroups()
+    {
+        if (_dataGrid is not null)
+        {
+            await _dataGrid.CollapseAllGroupsAsync();
+        }
     }
 
     readonly record struct DieResult(DiceType Type, int Value);
-
-    readonly record struct DieCount(DiceType Type, int Count);
 
     record Die(DiceType Type)
     {

@@ -1,13 +1,10 @@
 ﻿@page "/"
-@using Autodize.Client.Services
-
-@inject Notifier Notifier
 
 <PageTitle>autodize</PageTitle>
 
 <MudContainer Fixed="true">
     <MudGrid Justify="Justify.Center">
-        @foreach (Tumbler tumbler in Tumblers)
+        @foreach (var tumbler in Tumblers)
         {
             <MudItem xs="12">
                 <Tumbler OnRemoveCallback="Remove" />
